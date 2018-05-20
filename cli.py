@@ -1,6 +1,24 @@
 from socket import *
 import sys
+import os
 
+def temp_connect(command, file):
+  #recieve port num from server
+  port_num = control_connection.recv(5)
+  print "Server sent temp port", port_num+". Connecting now..."
+  temp_socket = socket(AF_INET, SOCK_STREAM)
+  temp_socket.connect((server_name, int(port_num)))
+  
+  print 'Opened a temp connection with server', (server_name, port_num)
+  if command=="put":
+    #send over file size
+    numBytes = get_file_size(file)
+    temp_socket.send(str(numBytes))
+    print numBytes
+    #sending file
+    putFile(temp_socket, file)
+  print "Closed temp socket"
+  temp_socket.close()
 
 
 '''
@@ -17,7 +35,31 @@ def get_file_size (file_name):
     file.close()
     return (file_size + len(file_name) + 1)
 
-
+def putFile(socket, file_name):
+    bytes_sent = 0
+    file = open(file_name, "r")
+    # The file data
+    file_data = None
+    # Keep sending until all is sent
+    while True:
+        
+        # Read 65536 bytes of data
+        file_data = file.read(65536)
+        file_data = file_name + bytes(0x1f) + file_data #prepend the file name to the file data with a delimiter of 0x1f which is the ascii code for unit separator 
+        # Make sure we did not hit EOF
+        if file_data:
+            # Get the size of the data read
+            # and convert it to string
+            file_size = len(file_data)
+                        
+            # Send the data!
+            while file_size > bytes_sent:
+                bytes_sent += socket.send(file_data[bytes_sent:])
+        # The file has been read. We are done
+        else:
+            break
+    file.close()
+    return bytes_sent
 
 
 # ================== CHECK VALID FUNCTION ARGS ================= #
@@ -76,26 +118,19 @@ while command != "quit":
 
 
   #SEND FILE TO SERVER
-
   if command.split(" ")[0]=="put":
-    #recieve port num from server
-    port_num = control_connection.recv(5)
-    print "Server sent temp port", port_num+". Connecting now..."
-    temp_socket = socket(AF_INET, SOCK_STREAM)
-    temp_socket.connect((server_name, int(port_num)))
-    print 'Opened a temp connection with server', (server_name, port_num)
-    #DO THE SENDING FILE PART HERE
-    #step 1: make sure the file exists
+    temp_connect("put",command.split(" ")[1])
+    break
+  elif command.split(" ")[0]=="get":
+    pass
+    #PREPARE TO RECIEVE
+  elif command == "lss":
+    os.system("ls")
+  else:
+    print "invalid command"
 
-    temp_socket.close()
 
-  #NOTE: Send command after or before  opening data connection?
 
-  # OPEN DATA CONNECTION #
-
-  # DO FUNCTION #
-
-  # CLOSE DATA CONNECTION #
 
 # CLOSE CONTROL CONNECTION #
 control_connection.close()

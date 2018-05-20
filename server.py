@@ -3,13 +3,6 @@ import sys
 import os
 
 
-# ************************************************
-# Receives the specified number of bytes
-# from the specified socket
-# @param sock - the socket from which to receive
-# @param numBytes - the number of bytes to receive
-# @return - the bytes received
-# *************************************************
 def recvAll(sock, numBytes):
 
   # The buffer
@@ -33,8 +26,47 @@ def recvAll(sock, numBytes):
   
   return recvBuff
 
+def ephemeral(command, file_name):
+  # Create a socket
+  temp_socket = socket(AF_INET, SOCK_STREAM)
+  # Bind the socket to port 0
+  temp_socket.bind(('',0))
+  # Retreive the ephemeral port number
+  print "I chose ephemeral port: ", temp_socket.getsockname()[1]
+  #send port num
+  control_connection.send(str(temp_socket.getsockname()[1]))
+  # wait for the client to connect to it
+  print "Waiting for the client to connect to temp port..."
+  temp_socket.listen(1)
 
-# CHECK VALID FUNCTION ARGS #
+  control_connection_t, client_address_t = temp_socket.accept()
+  
+  print "Client has connected"
+  print "Initiating file transfer."
+
+  if command=="put":
+    #Wait for client to send file size
+    numBytes = int(control_connection_t.recv(20))
+
+    print "The file size is ", numBytes
+      
+    # Get the file data
+    fileData = recvAll(control_connection_t, numBytes)
+      
+    print "The file data is: "
+    print fileData
+    #WHAT IS NUMBYTES
+    #PREPARE TO RECIEVE
+
+
+
+  elif command=="get":
+    pass
+    #PREPARE TO SEND
+
+  print "Closed temp socket."
+  temp_socket.close()
+  
 if len(sys.argv) < 2:
   print "USAGE python ", sys.argv[0], " <PORT NUMBER>"
   sys.exit()
@@ -99,44 +131,16 @@ while 1:
 
     if command=="quit":
       break
-    elif command.split(" ")[0]=="put":
-      # Create a socket
-      temp_socket = socket(AF_INET, SOCK_STREAM)
-      # Bind the socket to port 0
-      temp_socket.bind(('',0))
-      # Retreive the ephemeral port number
-      print "I chose ephemeral port: ", temp_socket.getsockname()[1]
-      #send port num
-      control_connection.send(str(temp_socket.getsockname()[1]))
-      # wait for the client to connect to it
-      print "Waiting for the client to connect to temp port..."
-      temp_socket.listen(1)
-
-      control_connection_t, client_address_t = temp_socket.accept()
-      print "client connected to temp port"
-
-
-
-
-
-      ## DO THE RECIEVING FILE PART HERE
-
-
-      temp_socket.close()
-
+    elif (command.split(" ")[0]=="get") or (command.split(" ")[0]=="put"):
+      file_name = command.split(" ")[1]
+      ephemeral(command.split(" ")[0],file_name)
+    
     elif command=="ls":
       os.system("ls")
       #send this stuff to client
     else:
       #Command has been received
       print "Command invalid."
-    
-    # OPEN DATA CONNECTION #
-    
-    # DO FUNCTION #
-
-    #CLOSE DATA CONNECTION #   
-
 
   #Client has closed the connection
   # CLOSE CONTROL CONNECTION #
